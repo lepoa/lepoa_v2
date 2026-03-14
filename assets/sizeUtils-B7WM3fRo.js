@@ -1,0 +1,1 @@
+const s=["34","36","38","40","42","44","46"],u=["PP","P","M","G","GG"],c=[...s,...u];function i(e){return[...e].sort((r,n)=>{const t=c.indexOf(r),o=c.indexOf(n);return t!==-1&&o!==-1?t-o:t!==-1?-1:o!==-1?1:r.localeCompare(n)})}function f(e){return!e||typeof e!="object"?0:Object.values(e).reduce((n,t)=>n+(typeof t=="number"?t:0),0)}export{f as g,i as s};

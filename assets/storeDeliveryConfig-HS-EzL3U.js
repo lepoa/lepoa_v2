@@ -1,0 +1,1 @@
+const e={originZipCode:"75110-760",storeAddress:"Rua Luiz França, nº 65, qd 32 lote 20 - Bairro Jundiaí - Anápolis/GO",storeHours:"Segunda a Sexta: 9h às 18h | Sábado: 9h às 13h",motoboyFee:10,motoboyDeliveryText:"Entrega rápida em Anápolis",defaultWeight:.3,defaultLength:30,defaultWidth:20,defaultHeight:10};export{e as S};

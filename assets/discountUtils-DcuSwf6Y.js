@@ -1,0 +1,1 @@
+function n(e,r,f){return!r||!f||f<=0?e:r==="percentage"?e*(1-f/100):r==="fixed"?Math.max(0,e-f):e}function t(e,r){return!!(e&&r&&r>0)}function x(e,r){return t(e,r)?e==="percentage"?`-${r}%`:e==="fixed"?`-R$ ${r==null?void 0:r.toFixed(2)}`:null:null}export{n as c,x as g,t as h};
