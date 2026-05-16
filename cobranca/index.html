@@ -116,8 +116,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Inter",sans-serif;background:
     <h2>Le.Poá</h2>
     <p>Acompanhamento de Cobrança</p>
     <form id="login-form">
-      <label class="lbl">Usuário</label>
-      <input id="lg-user" type="text" autocomplete="username" autocorrect="off" autocapitalize="off"/>
+      <label class="lbl">Email</label>
+      <input id="lg-user" type="email" autocomplete="email" autocorrect="off" autocapitalize="off"/>
       <label class="lbl">Senha</label>
       <input id="lg-pass" type="password" autocomplete="current-password"/>
       <button class="btn-login" type="submit">Entrar</button>
@@ -152,13 +152,18 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Inter",sans-serif;background:
 
 <div class="toast" id="toast"></div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script>
 const SB_URL  = "https://deibjfkveiyogvtscyeh.supabase.co";
 const SB_ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRlaWJqZmt2ZWl5b2d2dHNjeWVoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA2MDA3MzMsImV4cCI6MjA4NjE3NjczM30.eYGXOHLLJq6wpRT605kxSc8t_qS15_ux174d0rUOmfY";
-const HDR = { apikey: SB_ANON, Authorization: `Bearer ${SB_ANON}`, "Content-Type": "application/json" };
 
-const AUTH_KEY     = "lepoa-cobranca-auth-v1";
-const AUTH_PAYLOAD = "lepoa-cobranca-auth-payload-v1";
+const sb = window.supabase.createClient(SB_URL, SB_ANON);
+
+async function getHDR() {
+  const { data: { session } } = await sb.auth.getSession();
+  const token = session?.access_token || SB_ANON;
+  return { apikey: SB_ANON, Authorization: `Bearer ${token}`, "Content-Type": "application/json" };
+}
 
 const STATUS_CFG = {
   pendente:   { label: "Não contactada", emoji: "⏳" },
@@ -175,46 +180,22 @@ let searchText = "";
 let toastTimer;
 
 // ===== AUTH =====
-async function isAuthed() {
-  const token   = sessionStorage.getItem(AUTH_KEY);
-  const payload = sessionStorage.getItem(AUTH_PAYLOAD);
-  if (!token || !payload) return false;
-  try {
-    const r = await fetch(`${SB_URL}/functions/v1/admin-auth/verify`, {
-      method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ token, payload })
-    });
-    return r.ok && (await r.json()).valid === true;
-  } catch { return false; }
-}
-function clearAuth() {
-  sessionStorage.removeItem(AUTH_KEY);
-  sessionStorage.removeItem(AUTH_PAYLOAD);
-}
-
 document.getElementById("login-form").addEventListener("submit", async e => {
   e.preventDefault();
-  const u   = document.getElementById("lg-user").value.trim().toLowerCase();
-  const p   = document.getElementById("lg-pass").value;
-  const err = document.getElementById("lg-err");
+  const email = document.getElementById("lg-user").value.trim().toLowerCase();
+  const pass  = document.getElementById("lg-pass").value;
+  const err   = document.getElementById("lg-err");
   err.textContent = "";
-  try {
-    const r = await fetch(`${SB_URL}/functions/v1/admin-auth/login`, {
-      method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ user: u, pass: p })
-    });
-    if (!r.ok) { err.textContent = "Usuário ou senha inválidos."; return; }
-    const { token, payload } = await r.json();
-    sessionStorage.setItem(AUTH_KEY, token);
-    sessionStorage.setItem(AUTH_PAYLOAD, payload);
-    showApp();
-  } catch {
-    err.textContent = "Erro de conexão. Tente novamente.";
-  }
+  const { error } = await sb.auth.signInWithPassword({ email, password: pass });
+  if (error) { err.textContent = "Email ou senha inválidos."; return; }
+  showApp();
 });
-document.getElementById("btn-logout").addEventListener("click", () => { clearAuth(); location.reload(); });
+document.getElementById("btn-logout").addEventListener("click", async () => {
+  await sb.auth.signOut();
+  location.reload();
+});
 
-isAuthed().then(ok => { if (ok) showApp(); });
+sb.auth.getSession().then(({ data: { session } }) => { if (session) showApp(); });
 
 // ===== INIT =====
 async function showApp() {
@@ -224,7 +205,7 @@ async function showApp() {
 }
 
 async function loadEvents() {
-  const r = await fetch(`${SB_URL}/rest/v1/live_events?select=id,titulo,data_hora_inicio&order=data_hora_inicio.desc&limit=20`, { headers: HDR });
+  const r = await fetch(`${SB_URL}/rest/v1/live_events?select=id,titulo,data_hora_inicio&order=data_hora_inicio.desc&limit=20`, { headers: await getHDR() });
   const events = await r.json();
   const sel = document.getElementById("event-select");
   sel.innerHTML = events.map(e => {
@@ -243,7 +224,7 @@ async function loadBags(eventId) {
   // Busca carts
   const r1 = await fetch(
     `${SB_URL}/rest/v1/live_carts?select=id,bag_number,status,total&live_event_id=eq.${eventId}&status=in.(aberto,em_confirmacao,aguardando_pagamento)&order=bag_number`,
-    { headers: HDR }
+    { headers: await getHDR() }
   );
   const carts = await r1.json();
   if (!carts.length) { renderEmpty(); return; }
@@ -253,7 +234,7 @@ async function loadBags(eventId) {
   // Busca clientes
   const r2 = await fetch(
     `${SB_URL}/rest/v1/live_carts?select=id,live_customer_id,live_customers(nome,whatsapp,instagram_handle)&id=in.(${ids.join(",")})`,
-    { headers: HDR }
+    { headers: await getHDR() }
   );
   const withCustomers = await r2.json();
   const customerMap = {};
@@ -262,7 +243,7 @@ async function loadBags(eventId) {
   // Busca contagem de itens
   const r3 = await fetch(
     `${SB_URL}/rest/v1/live_cart_items?select=live_cart_id&live_cart_id=in.(${ids.join(",")})&status=in.(reservado,confirmado)`,
-    { headers: HDR }
+    { headers: await getHDR() }
   );
   const items = await r3.json();
   const itemCount = {};
@@ -271,7 +252,7 @@ async function loadBags(eventId) {
   // Busca follow ups
   const r4 = await fetch(
     `${SB_URL}/rest/v1/live_cart_follow_up?live_cart_id=in.(${ids.join(",")})`,
-    { headers: HDR }
+    { headers: await getHDR() }
   );
   const fus = await r4.json();
   fus.forEach(f => { followUps[f.live_cart_id] = f; });
@@ -444,7 +425,7 @@ async function upsertFollowUp(cartId, patch) {
   const body = { live_cart_id: cartId, status: fu.status||"pendente", consultora: fu.consultora||"", observacao: fu.observacao||"", updated_at: new Date().toISOString(), ...patch };
   const r = await fetch(`${SB_URL}/rest/v1/live_cart_follow_up`, {
     method: "POST",
-    headers: { ...HDR, Prefer: "resolution=merge-duplicates" },
+    headers: { ...await getHDR(), Prefer: "resolution=merge-duplicates" },
     body: JSON.stringify(body)
   });
   if (r.ok) toast("Salvo ✓");

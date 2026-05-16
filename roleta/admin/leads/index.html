@@ -97,8 +97,8 @@ tbody td{padding:10px 12px;font-size:13px;vertical-align:middle}
 <div id="login-wrap" class="login-wrap" style="display:none">
   <div class="login-card">
     <h2>Acesso restrito</h2>
-    <label class="lbl-small">Usuário</label>
-    <input id="lg-user" type="text" autocomplete="username" placeholder="lepoa"/>
+    <label class="lbl-small">Email</label>
+    <input id="lg-user" type="email" autocomplete="email" placeholder="comercial@lepoa.com.br"/>
     <label class="lbl-small">Senha</label>
     <input id="lg-pass" type="password" autocomplete="current-password" placeholder="••••"/>
     <button class="btn-login" id="btn-login">Entrar</button>
@@ -153,56 +153,30 @@ tbody td{padding:10px 12px;font-size:13px;vertical-align:middle}
   </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script>
 (function(){
-  const AUTH_KEY     = "lepoa-admin-auth-v1";
-  const AUTH_PAYLOAD = "lepoa-admin-auth-payload-v1";
   const CONTACTS_KEY = "lepoa-leads-contacts-v1";
 
-  // Supabase — hardcoded para não depender de prizes-store.js
   const SB_URL  = "https://deibjfkveiyogvtscyeh.supabase.co";
   const SB_ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRlaWJqZmt2ZWl5b2d2dHNjeWVoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA2MDA3MzMsImV4cCI6MjA4NjE3NjczM30.eYGXOHLLJq6wpRT605kxSc8t_qS15_ux174d0rUOmfY";
+  const sb = window.supabase.createClient(SB_URL, SB_ANON);
 
   // ---- Auth ----
-  async function isAuthed(){
-    const token   = sessionStorage.getItem(AUTH_KEY);
-    const payload = sessionStorage.getItem(AUTH_PAYLOAD);
-    if (!token || !payload) return false;
-    try {
-      const r = await fetch(`${SB_URL}/functions/v1/admin-auth/verify`, {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ token, payload })
-      });
-      return r.ok && (await r.json()).valid === true;
-    } catch { return false; }
-  }
-  function clearAuth(){
-    sessionStorage.removeItem(AUTH_KEY);
-    sessionStorage.removeItem(AUTH_PAYLOAD);
-  }
-
-  isAuthed().then(ok => { if (ok) showApp(); else showLogin(); });
+  sb.auth.getSession().then(({ data: { session } }) => {
+    if (session) showApp(); else showLogin();
+  });
 
   document.getElementById("btn-login").addEventListener("click", tryLogin);
   document.getElementById("lg-pass").addEventListener("keydown", e=>{ if(e.key==="Enter") tryLogin(); });
-  document.getElementById("btn-logout").addEventListener("click", ()=>{ clearAuth(); showLogin(); });
+  document.getElementById("btn-logout").addEventListener("click", async ()=>{ await sb.auth.signOut(); showLogin(); });
 
   async function tryLogin(){
-    const u = document.getElementById("lg-user").value.trim().toLowerCase();
-    const p = document.getElementById("lg-pass").value;
-    try {
-      const r = await fetch(`${SB_URL}/functions/v1/admin-auth/login`, {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ user: u, pass: p })
-      });
-      if (!r.ok) { document.getElementById("lg-err").textContent = "Usuário ou senha inválidos."; return; }
-      const { token, payload } = await r.json();
-      sessionStorage.setItem(AUTH_KEY, token);
-      sessionStorage.setItem(AUTH_PAYLOAD, payload);
-      showApp();
-    } catch {
-      document.getElementById("lg-err").textContent = "Erro de conexão. Tente novamente.";
-    }
+    const email = document.getElementById("lg-user").value.trim().toLowerCase();
+    const pass  = document.getElementById("lg-pass").value;
+    const { error } = await sb.auth.signInWithPassword({ email, password: pass });
+    if (error) { document.getElementById("lg-err").textContent = "Email ou senha inválidos."; return; }
+    showApp();
   }
   function showLogin(){ document.getElementById("login-wrap").style.display="flex"; document.getElementById("app").style.display="none"; }
   function showApp(){ document.getElementById("login-wrap").style.display="none"; document.getElementById("app").style.display="block"; loadAll(); }

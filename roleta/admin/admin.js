@@ -9,33 +9,15 @@
   document.getElementById("lim-code").textContent  = LIMITS.code;
   document.getElementById("lim-valid").textContent = LIMITS.valid;
 
-  // ====== Auth via Edge Function ======
-  const AUTH_KEY     = "lepoa-admin-auth-v1";
-  const AUTH_PAYLOAD = "lepoa-admin-auth-payload-v1";
-  const SB_URL       = window.SB_URL || "https://deibjfkveiyogvtscyeh.supabase.co";
+  // ====== Auth via Supabase Auth ======
+  const SB_URL  = window.SB_URL  || "https://deibjfkveiyogvtscyeh.supabase.co";
+  const SB_ANON = window.SB_ANON || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRlaWJqZmt2ZWl5b2d2dHNjeWVoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA2MDA3MzMsImV4cCI6MjA4NjE3NjczM30.eYGXOHLLJq6wpRT605kxSc8t_qS15_ux174d0rUOmfY";
+  const sb = window.supabase.createClient(SB_URL, SB_ANON);
 
   // ====== State (must be before auth check) ======
   let prizes = window.loadPrizes();        // active working copy
   let original = JSON.stringify(prizes);   // for dirty-check
   let dirty = false;
-
-  async function isAuthed(){
-    const token   = sessionStorage.getItem(AUTH_KEY);
-    const payload = sessionStorage.getItem(AUTH_PAYLOAD);
-    if (!token || !payload) return false;
-    try {
-      const r = await fetch(`${SB_URL}/functions/v1/admin-auth/verify`, {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ token, payload })
-      });
-      return r.ok && (await r.json()).valid === true;
-    } catch { return false; }
-  }
-
-  function clearAuth(){
-    sessionStorage.removeItem(AUTH_KEY);
-    sessionStorage.removeItem(AUTH_PAYLOAD);
-  }
 
   const loginEl = document.getElementById("login");
   const adminEl = document.getElementById("admin");
@@ -50,30 +32,22 @@
     adminEl.classList.remove("visible");
   }
 
-  isAuthed().then(ok => { if (ok) showAuthedUI(); else showLoginUI(); });
+  sb.auth.getSession().then(({ data: { session } }) => {
+    if (session) showAuthedUI(); else showLoginUI();
+  });
 
   document.getElementById("login-form").addEventListener("submit", async (e)=>{
     e.preventDefault();
-    const u   = document.getElementById("lg-user").value.trim().toLowerCase();
-    const p   = document.getElementById("lg-pass").value;
-    const err = document.getElementById("lg-err");
+    const email = document.getElementById("lg-user").value.trim().toLowerCase();
+    const pass  = document.getElementById("lg-pass").value;
+    const err   = document.getElementById("lg-err");
     err.textContent = "";
-    try {
-      const r = await fetch(`${SB_URL}/functions/v1/admin-auth/login`, {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ user: u, pass: p })
-      });
-      if (!r.ok) { err.textContent = "Usuário ou senha inválidos."; return; }
-      const { token, payload } = await r.json();
-      sessionStorage.setItem(AUTH_KEY, token);
-      sessionStorage.setItem(AUTH_PAYLOAD, payload);
-      showAuthedUI();
-    } catch {
-      err.textContent = "Erro de conexão. Tente novamente.";
-    }
+    const { error } = await sb.auth.signInWithPassword({ email, password: pass });
+    if (error) { err.textContent = "Email ou senha inválidos."; return; }
+    showAuthedUI();
   });
-  document.getElementById("btn-logout").addEventListener("click", ()=>{
-    clearAuth(); showLoginUI();
+  document.getElementById("btn-logout").addEventListener("click", async ()=>{
+    await sb.auth.signOut(); showLoginUI();
   });
 
   function markDirty(d){
