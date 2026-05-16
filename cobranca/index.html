@@ -1,0 +1,473 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Le.Poá — Acompanhamento de Cobrança</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,"Inter",sans-serif;background:#f2f1e8;color:#1e2117;min-height:100vh}
+
+/* TOPBAR */
+.topbar{background:#2b3220;color:#faf7f0;padding:12px 20px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;position:sticky;top:0;z-index:100}
+.topbar h1{font-size:14px;font-weight:600;letter-spacing:.06em}
+.topbar-right{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.topbar select{background:#3a4a2a;color:#e6ca9a;border:1px solid rgba(230,202,154,.3);border-radius:6px;padding:5px 10px;font-size:12px;cursor:pointer;max-width:220px}
+.topbar button{color:#e6ca9a;background:none;border:1px solid rgba(230,202,154,.3);border-radius:6px;padding:5px 10px;font-size:11px;letter-spacing:.06em;text-transform:uppercase;cursor:pointer}
+.topbar button:hover{background:rgba(230,202,154,.12)}
+
+/* LOGIN */
+.login-wrap{display:flex;align-items:center;justify-content:center;min-height:90vh;padding:20px}
+.login-card{background:#fff;border-radius:16px;padding:36px 32px;width:100%;max-width:320px;box-shadow:0 20px 50px -20px rgba(43,50,32,.35)}
+.login-card h2{font-size:20px;margin-bottom:6px;color:#2b3220}
+.login-card p{font-size:13px;color:#6f7a4f;margin-bottom:24px}
+.lbl{display:block;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:#6f7a4f;margin-bottom:5px}
+.login-card input{width:100%;padding:11px 14px;border:1px solid rgba(74,83,51,.22);border-radius:8px;font-size:15px;margin-bottom:14px;outline:none}
+.login-card input:focus{border-color:#6f7a4f;box-shadow:0 0 0 3px rgba(111,122,79,.15)}
+.btn-login{width:100%;padding:13px;background:#2b3220;color:#faf7f0;border:none;border-radius:99px;font-size:13px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;cursor:pointer}
+.login-err{color:#b68680;font-size:12px;margin-top:8px;min-height:16px}
+
+/* MAIN */
+.main{max-width:900px;margin:0 auto;padding:20px 16px}
+
+/* STATS */
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin-bottom:18px}
+.stat-card{background:#fff;border-radius:10px;padding:14px 16px;box-shadow:0 2px 8px rgba(43,50,32,.08);border-top:3px solid transparent}
+.stat-card .lbl{font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:#6f7a4f;margin-bottom:4px}
+.stat-card .val{font-size:26px;font-weight:700;color:#2b3220}
+.stat-card.pendente{border-color:#9ca3af}
+.stat-card.enviada{border-color:#d97706}
+.stat-card.aguardando{border-color:#2563eb}
+.stat-card.confirmado{border-color:#16a34a}
+.stat-card.desistiu{border-color:#dc2626}
+
+/* FILTROS */
+.filter-bar{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;align-items:center}
+.tab{padding:6px 14px;border-radius:99px;border:1px solid rgba(74,83,51,.2);background:#fff;font-size:12px;cursor:pointer;font-weight:500;color:#4a5333;transition:all .15s;white-space:nowrap}
+.tab.active{background:#2b3220;color:#faf7f0;border-color:#2b3220}
+.search{padding:7px 12px;border:1px solid rgba(74,83,51,.22);border-radius:8px;font-size:13px;width:180px;outline:none;background:#fff}
+.search:focus{border-color:#6f7a4f}
+
+/* TOTAL BAR */
+.total-bar{background:#2b3220;color:#faf7f0;border-radius:10px;padding:10px 16px;margin-bottom:16px;display:flex;justify-content:space-between;align-items:center;font-size:13px}
+.total-bar strong{font-size:17px;color:#e6ca9a}
+
+/* CARDS */
+.cards{display:flex;flex-direction:column;gap:12px}
+
+.bag-card{background:#fff;border-radius:12px;box-shadow:0 2px 10px rgba(43,50,32,.08);overflow:hidden;border-left:5px solid #9ca3af;transition:border-color .2s}
+.bag-card.enviada{border-left-color:#d97706}
+.bag-card.aguardando{border-left-color:#2563eb}
+.bag-card.confirmado{border-left-color:#16a34a}
+.bag-card.desistiu{border-left-color:#dc2626}
+
+.card-top{display:flex;align-items:flex-start;gap:12px;padding:14px 16px;flex-wrap:wrap}
+.bag-num{background:#2b3220;color:#e6ca9a;font-size:18px;font-weight:700;border-radius:8px;padding:6px 12px;min-width:52px;text-align:center;flex-shrink:0}
+.card-info{flex:1;min-width:0}
+.card-info .nome{font-size:15px;font-weight:600;color:#1e2117;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.card-info .insta{font-size:12px;color:#6f7a4f;margin-top:2px}
+.card-right{text-align:right;flex-shrink:0}
+.card-right .total{font-size:18px;font-weight:700;color:#2b3220}
+.card-right .pecas{font-size:11px;color:#9ca3af;margin-top:2px}
+
+.card-actions{padding:0 16px 14px;display:flex;flex-direction:column;gap:10px}
+
+/* STATUS BUTTONS */
+.status-group{display:flex;gap:6px;flex-wrap:wrap}
+.st-btn{padding:6px 12px;border-radius:99px;border:1.5px solid;font-size:11px;font-weight:600;cursor:pointer;letter-spacing:.04em;transition:all .15s;background:transparent}
+.st-btn.pendente  {border-color:#9ca3af;color:#6b7280}
+.st-btn.enviada   {border-color:#d97706;color:#d97706}
+.st-btn.aguardando{border-color:#2563eb;color:#2563eb}
+.st-btn.confirmado{border-color:#16a34a;color:#16a34a}
+.st-btn.desistiu  {border-color:#dc2626;color:#dc2626}
+.st-btn.active.pendente  {background:#9ca3af;color:#fff}
+.st-btn.active.enviada   {background:#d97706;color:#fff}
+.st-btn.active.aguardando{background:#2563eb;color:#fff}
+.st-btn.active.confirmado{background:#16a34a;color:#fff}
+.st-btn.active.desistiu  {background:#dc2626;color:#fff}
+
+/* BOTTOM ROW */
+.card-bottom{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.wpp-btn{display:inline-flex;align-items:center;gap:6px;background:#25d366;color:#fff;border:none;border-radius:8px;padding:7px 14px;font-size:12px;font-weight:600;cursor:pointer;text-decoration:none;white-space:nowrap;flex-shrink:0}
+.wpp-btn:hover{background:#1ebe59}
+.wpp-btn svg{width:16px;height:16px}
+.no-wpp{font-size:11px;color:#9ca3af;display:inline-flex;align-items:center;gap:4px}
+.insta-btn{display:inline-flex;align-items:center;gap:6px;background:linear-gradient(135deg,#f09433,#e6683c,#dc2743,#cc2366,#bc1888);color:#fff;border:none;border-radius:8px;padding:7px 14px;font-size:12px;font-weight:600;cursor:pointer;text-decoration:none;white-space:nowrap;flex-shrink:0}
+.insta-btn:hover{opacity:.88}
+.field-group{display:flex;gap:8px;flex:1;flex-wrap:wrap}
+.mini-input{flex:1;min-width:120px;padding:7px 10px;border:1px solid rgba(74,83,51,.2);border-radius:8px;font-size:12px;background:#f9f8f4;outline:none;color:#1e2117}
+.mini-input:focus{border-color:#6f7a4f;background:#fff}
+.mini-input::placeholder{color:#9ca3af}
+
+.updated-at{font-size:10px;color:#9ca3af;text-align:right;padding:0 16px 10px}
+
+/* EMPTY */
+.empty{text-align:center;padding:60px 20px;color:#9ca3af;font-size:14px}
+
+/* TOAST */
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);background:#2b3220;color:#faf7f0;padding:10px 20px;border-radius:99px;font-size:13px;opacity:0;transition:all .25s;z-index:999;pointer-events:none;white-space:nowrap}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+</style>
+</head>
+<body>
+
+<div id="login" class="login-wrap">
+  <div class="login-card">
+    <h2>Le.Poá</h2>
+    <p>Acompanhamento de Cobrança</p>
+    <form id="login-form">
+      <label class="lbl">Usuário</label>
+      <input id="lg-user" type="text" autocomplete="username" autocorrect="off" autocapitalize="off"/>
+      <label class="lbl">Senha</label>
+      <input id="lg-pass" type="password" autocomplete="current-password"/>
+      <button class="btn-login" type="submit">Entrar</button>
+      <div class="login-err" id="lg-err"></div>
+    </form>
+  </div>
+</div>
+
+<div id="app" style="display:none">
+  <div class="topbar">
+    <h1>📋 Acompanhamento de Cobrança</h1>
+    <div class="topbar-right">
+      <select id="event-select"><option>Carregando...</option></select>
+      <button id="btn-logout">Sair</button>
+    </div>
+  </div>
+
+  <div class="main">
+    <div class="stats" id="stats"></div>
+
+    <div class="filter-bar">
+      <input class="search" id="search" type="text" placeholder="Buscar cliente..."/>
+      <div id="filter-tabs"></div>
+    </div>
+
+    <div class="total-bar" id="total-bar"></div>
+
+    <div class="cards" id="cards"></div>
+    <div class="empty" id="empty" style="display:none">Nenhum bag encontrado.</div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const SB_URL  = "https://deibjfkveiyogvtscyeh.supabase.co";
+const SB_ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRlaWJqZmt2ZWl5b2d2dHNjeWVoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA2MDA3MzMsImV4cCI6MjA4NjE3NjczM30.eYGXOHLLJq6wpRT605kxSc8t_qS15_ux174d0rUOmfY";
+const HDR = { apikey: SB_ANON, Authorization: `Bearer ${SB_ANON}`, "Content-Type": "application/json" };
+
+const AUTH_KEY     = "lepoa-cobranca-auth-v1";
+const AUTH_PAYLOAD = "lepoa-cobranca-auth-payload-v1";
+
+const STATUS_CFG = {
+  pendente:   { label: "Não contactada", emoji: "⏳" },
+  enviada:    { label: "Msg enviada",    emoji: "💬" },
+  aguardando: { label: "Aguardando",     emoji: "🔄" },
+  confirmado: { label: "Vai pagar",      emoji: "✅" },
+  desistiu:   { label: "Desistiu",       emoji: "❌" },
+};
+
+let bags = [];
+let followUps = {};
+let filterStatus = "todos";
+let searchText = "";
+let toastTimer;
+
+// ===== AUTH =====
+async function isAuthed() {
+  const token   = sessionStorage.getItem(AUTH_KEY);
+  const payload = sessionStorage.getItem(AUTH_PAYLOAD);
+  if (!token || !payload) return false;
+  try {
+    const r = await fetch(`${SB_URL}/functions/v1/admin-auth/verify`, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ token, payload })
+    });
+    return r.ok && (await r.json()).valid === true;
+  } catch { return false; }
+}
+function clearAuth() {
+  sessionStorage.removeItem(AUTH_KEY);
+  sessionStorage.removeItem(AUTH_PAYLOAD);
+}
+
+document.getElementById("login-form").addEventListener("submit", async e => {
+  e.preventDefault();
+  const u   = document.getElementById("lg-user").value.trim().toLowerCase();
+  const p   = document.getElementById("lg-pass").value;
+  const err = document.getElementById("lg-err");
+  err.textContent = "";
+  try {
+    const r = await fetch(`${SB_URL}/functions/v1/admin-auth/login`, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ user: u, pass: p })
+    });
+    if (!r.ok) { err.textContent = "Usuário ou senha inválidos."; return; }
+    const { token, payload } = await r.json();
+    sessionStorage.setItem(AUTH_KEY, token);
+    sessionStorage.setItem(AUTH_PAYLOAD, payload);
+    showApp();
+  } catch {
+    err.textContent = "Erro de conexão. Tente novamente.";
+  }
+});
+document.getElementById("btn-logout").addEventListener("click", () => { clearAuth(); location.reload(); });
+
+isAuthed().then(ok => { if (ok) showApp(); });
+
+// ===== INIT =====
+async function showApp() {
+  document.getElementById("login").style.display = "none";
+  document.getElementById("app").style.display = "block";
+  await loadEvents();
+}
+
+async function loadEvents() {
+  const r = await fetch(`${SB_URL}/rest/v1/live_events?select=id,titulo,data_hora_inicio&order=data_hora_inicio.desc&limit=20`, { headers: HDR });
+  const events = await r.json();
+  const sel = document.getElementById("event-select");
+  sel.innerHTML = events.map(e => {
+    const d = new Date(e.data_hora_inicio).toLocaleDateString("pt-BR");
+    return `<option value="${e.id}">${d} — ${e.titulo || "Live"}</option>`;
+  }).join("");
+  sel.addEventListener("change", () => loadBags(sel.value));
+  if (events.length) loadBags(events[0].id);
+}
+
+async function loadBags(eventId) {
+  bags = [];
+  followUps = {};
+  document.getElementById("cards").innerHTML = "<div class='empty'>Carregando...</div>";
+
+  // Busca carts
+  const r1 = await fetch(
+    `${SB_URL}/rest/v1/live_carts?select=id,bag_number,status,total&live_event_id=eq.${eventId}&status=in.(aberto,em_confirmacao,aguardando_pagamento)&order=bag_number`,
+    { headers: HDR }
+  );
+  const carts = await r1.json();
+  if (!carts.length) { renderEmpty(); return; }
+
+  const ids = carts.map(c => c.id);
+
+  // Busca clientes
+  const r2 = await fetch(
+    `${SB_URL}/rest/v1/live_carts?select=id,live_customer_id,live_customers(nome,whatsapp,instagram_handle)&id=in.(${ids.join(",")})`,
+    { headers: HDR }
+  );
+  const withCustomers = await r2.json();
+  const customerMap = {};
+  withCustomers.forEach(c => { customerMap[c.id] = c.live_customers; });
+
+  // Busca contagem de itens
+  const r3 = await fetch(
+    `${SB_URL}/rest/v1/live_cart_items?select=live_cart_id&live_cart_id=in.(${ids.join(",")})&status=in.(reservado,confirmado)`,
+    { headers: HDR }
+  );
+  const items = await r3.json();
+  const itemCount = {};
+  items.forEach(i => { itemCount[i.live_cart_id] = (itemCount[i.live_cart_id] || 0) + 1; });
+
+  // Busca follow ups
+  const r4 = await fetch(
+    `${SB_URL}/rest/v1/live_cart_follow_up?live_cart_id=in.(${ids.join(",")})`,
+    { headers: HDR }
+  );
+  const fus = await r4.json();
+  fus.forEach(f => { followUps[f.live_cart_id] = f; });
+
+  // Monta bags
+  bags = carts.map(c => ({
+    ...c,
+    customer: customerMap[c.id],
+    qtd_pecas: itemCount[c.id] || 0,
+    follow_up: followUps[c.id] || { status: "pendente", consultora: "", observacao: "" }
+  }));
+
+  render();
+}
+
+// ===== RENDER =====
+function filtered() {
+  return bags.filter(b => {
+    const st = b.follow_up.status || "pendente";
+    if (filterStatus !== "todos" && st !== filterStatus) return false;
+    if (searchText) {
+      const q = searchText.toLowerCase();
+      const nome = (b.customer?.nome || "").toLowerCase();
+      const insta = (b.customer?.instagram_handle || "").toLowerCase();
+      if (!nome.includes(q) && !insta.includes(q)) return false;
+    }
+    return true;
+  });
+}
+
+function render() {
+  renderStats();
+  renderFilterTabs();
+  renderTotalBar();
+  renderCards();
+}
+
+function renderStats() {
+  const counts = { pendente:0, enviada:0, aguardando:0, confirmado:0, desistiu:0 };
+  bags.forEach(b => { const s = b.follow_up.status || "pendente"; if (counts[s] !== undefined) counts[s]++; });
+  document.getElementById("stats").innerHTML = Object.entries(STATUS_CFG).map(([k,v]) =>
+    `<div class="stat-card ${k}"><div class="lbl">${v.emoji} ${v.label}</div><div class="val">${counts[k]}</div></div>`
+  ).join("");
+}
+
+function renderFilterTabs() {
+  const total = bags.length;
+  const counts = { todos: total, pendente:0, enviada:0, aguardando:0, confirmado:0, desistiu:0 };
+  bags.forEach(b => { const s = b.follow_up.status || "pendente"; if (counts[s] !== undefined) counts[s]++; });
+  const tabs = [["todos","Todas"], ...Object.entries(STATUS_CFG).map(([k,v])=>[k,v.label])];
+  document.getElementById("filter-tabs").innerHTML = tabs.map(([k,l]) =>
+    `<button class="tab${filterStatus===k?" active":""}" onclick="setFilter('${k}')">${l} <span style="opacity:.6;font-size:10px">${counts[k]}</span></button>`
+  ).join("");
+}
+
+function renderTotalBar() {
+  const f = filtered();
+  const total = f.reduce((s,b) => s + parseFloat(b.total||0), 0);
+  const pendVal = f.filter(b => (b.follow_up.status||"pendente") !== "desistiu")
+                   .reduce((s,b) => s + parseFloat(b.total||0), 0);
+  document.getElementById("total-bar").innerHTML =
+    `<span>${f.length} bags em aberto</span><strong>R$ ${pendVal.toFixed(2).replace(".",",")}</strong>`;
+}
+
+function renderCards() {
+  const f = filtered();
+  const el = document.getElementById("cards");
+  const emp = document.getElementById("empty");
+  if (!f.length) { el.innerHTML=""; emp.style.display="block"; return; }
+  emp.style.display="none";
+  el.innerHTML = f.map(b => bagCard(b)).join("");
+}
+
+function bagCard(b) {
+  const fu = b.follow_up;
+  const st = fu.status || "pendente";
+  const nome = b.customer?.nome || "(sem nome)";
+  const insta = b.customer?.instagram_handle ? `@${b.customer.instagram_handle.replace(/^@/,"")}` : "";
+  const wpp = b.customer?.whatsapp;
+  const total = parseFloat(b.total||0).toFixed(2).replace(".",",");
+  const stBtns = Object.keys(STATUS_CFG).map(k =>
+    `<button class="st-btn ${k}${st===k?" active":""}" onclick="setStatus('${b.id}','${k}')">${STATUS_CFG[k].emoji} ${STATUS_CFG[k].label}</button>`
+  ).join("");
+
+  let wppHtml = "";
+  if (wpp) {
+    const msg = encodeURIComponent(`Olá ${nome.split(" ")[0]}! 😊 Aqui é a Le.Poá! Você participou da nossa live e temos ${b.qtd_pecas} peça(s) reservada(s) para você no valor de *R$ ${total}*. Qual a forma de pagamento? Pix ou Cartão? 💚`);
+    const num = wpp.replace(/\D/g,"");
+    wppHtml = `<a class="wpp-btn" href="https://wa.me/${num}?text=${msg}" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.124.558 4.117 1.532 5.845L.057 23.928a.5.5 0 0 0 .621.601l6.262-1.643A11.945 11.945 0 0 0 12 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.75a9.722 9.722 0 0 1-4.953-1.352l-.355-.211-3.68.966.984-3.595-.232-.369A9.712 9.712 0 0 1 2.25 12C2.25 6.615 6.615 2.25 12 2.25S21.75 6.615 21.75 12 17.385 21.75 12 21.75z"/></svg>WhatsApp</a>`;
+  } else if (insta) {
+    const handle = insta.replace(/^@/, "");
+    wppHtml = `<a class="insta-btn" href="https://instagram.com/${handle}" target="_blank" rel="noopener">📷 ${insta}</a>`;
+  } else {
+    wppHtml = `<span class="no-wpp">Sem contato</span>`;
+  }
+
+  const updAt = fu.updated_at ? `Atualizado: ${new Date(fu.updated_at).toLocaleString("pt-BR")}` : "";
+
+  return `
+  <div class="bag-card ${st}" id="card-${b.id}">
+    <div class="card-top">
+      <div class="bag-num">#${b.bag_number}</div>
+      <div class="card-info">
+        <div class="nome">${esc(nome)}</div>
+        <div class="insta">${esc(insta)}</div>
+      </div>
+      <div class="card-right">
+        <div class="total">R$ ${total}</div>
+        <div class="pecas">${b.qtd_pecas} peça(s)</div>
+      </div>
+    </div>
+    <div class="card-actions">
+      <div class="status-group">${stBtns}</div>
+      <div class="card-bottom">
+        ${wppHtml}
+        <div class="field-group">
+          <input class="mini-input" placeholder="Consultora responsável" value="${esc(fu.consultora||"")}"
+            onblur="saveField('${b.id}','consultora',this.value)"/>
+          <input class="mini-input" placeholder="Observação..." value="${esc(fu.observacao||"")}"
+            onblur="saveField('${b.id}','observacao',this.value)"/>
+        </div>
+      </div>
+    </div>
+    ${updAt ? `<div class="updated-at">${updAt}</div>` : ""}
+  </div>`;
+}
+
+function esc(s){ return String(s||"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m])); }
+
+// ===== ACTIONS =====
+window.setFilter = function(s) { filterStatus = s; render(); };
+
+document.getElementById("search").addEventListener("input", e => { searchText = e.target.value; render(); });
+
+window.setStatus = async function(cartId, status) {
+  const bag = bags.find(b => b.id === cartId);
+  if (!bag) return;
+  bag.follow_up.status = status;
+  bag.follow_up.updated_at = new Date().toISOString();
+  updateCard(cartId);
+  renderStats();
+  renderFilterTabs();
+  await upsertFollowUp(cartId, { status });
+};
+
+window.saveField = async function(cartId, field, value) {
+  const bag = bags.find(b => b.id === cartId);
+  if (!bag) return;
+  if (bag.follow_up[field] === value) return;
+  bag.follow_up[field] = value;
+  bag.follow_up.updated_at = new Date().toISOString();
+  await upsertFollowUp(cartId, { [field]: value });
+};
+
+function updateCard(cartId) {
+  const bag = bags.find(b => b.id === cartId);
+  if (!bag) return;
+  const el = document.getElementById(`card-${cartId}`);
+  if (!el) return;
+  const st = bag.follow_up.status || "pendente";
+  el.className = `bag-card ${st}`;
+  el.querySelectorAll(".st-btn").forEach(btn => {
+    btn.classList.toggle("active", btn.classList.contains(st));
+  });
+}
+
+async function upsertFollowUp(cartId, patch) {
+  const bag = bags.find(b => b.id === cartId);
+  const fu = bag.follow_up;
+  const body = { live_cart_id: cartId, status: fu.status||"pendente", consultora: fu.consultora||"", observacao: fu.observacao||"", updated_at: new Date().toISOString(), ...patch };
+  const r = await fetch(`${SB_URL}/rest/v1/live_cart_follow_up`, {
+    method: "POST",
+    headers: { ...HDR, Prefer: "resolution=merge-duplicates" },
+    body: JSON.stringify(body)
+  });
+  if (r.ok) toast("Salvo ✓");
+  else toast("Erro ao salvar", true);
+}
+
+// ===== TOAST =====
+function toast(msg, err) {
+  const t = document.getElementById("toast");
+  t.textContent = msg;
+  t.className = "toast show" + (err ? " err" : "");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.className = "toast", 2000);
+}
+
+function renderEmpty() {
+  document.getElementById("cards").innerHTML = "";
+  document.getElementById("empty").style.display = "block";
+  document.getElementById("empty").textContent = "Nenhum bag em aberto nesta live.";
+  renderStats();
+  renderFilterTabs();
+  document.getElementById("total-bar").innerHTML = "<span>0 bags</span><strong>R$ 0,00</strong>";
+}
+</script>
+</body>
+</html>
